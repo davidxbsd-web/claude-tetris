@@ -1,0 +1,69 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Read,Grep,Glob"'
+
+          prompt: |
+            Estás analizando el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
+
+            Tu tarea es hacer un triaje automático del issue. Sigue estos pasos en orden:
+
+            1. Lee el issue completo con:
+               gh issue view ${{ github.event.issue.number }} --json title,body,labels
+
+            2. Lista los labels disponibles en el repositorio con:
+               gh label list
+               Debes usar EXCLUSIVAMENTE labels que ya existan en esa lista. No crees labels nuevos.
+
+            3. Revisa el código relevante del repositorio (game.js, index.html, style.css, CLAUDE.md)
+               para entender la arquitectura y poder ubicar con precisión la posible causa del problema
+               descrito en el issue.
+
+            4. Aplica los labels que correspondan al issue con:
+               gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2"
+
+            5. Publica UN ÚNICO comentario nuevo en el issue (no más de uno) con:
+               gh issue comment ${{ github.event.issue.number }} --body "..."
+               El comentario debe ser un diagnóstico general del problema, escrito en español, con esta estructura:
+               - **Resumen**: qué está pidiendo o reportando el issue, en una o dos frases.
+               - **Área/componente afectado**: qué parte del código (archivo/función) es probablemente
+                 responsable, basándote en tu revisión del repositorio.
+               - **Diagnóstico / causa probable**: hipótesis razonada sobre la causa raíz (si es un bug)
+                 o sobre el alcance técnico (si es una mejora/feature).
+               - **Sugerencia de abordaje**: pasos generales recomendados para implementar la solución,
+                 sin escribir el código todavía.
+
+            Restricciones importantes:
+            - NO edites el título ni el cuerpo (body) del issue.
+            - NO abras pull requests ni modifiques archivos del repositorio.
+            - NO publiques más de un comentario.
+            - Si el issue ya tiene un comentario de diagnóstico tuyo previo (por ejemplo, tras una edición),
+              puedes publicar uno nuevo actualizado en vez de duplicar el anterior innecesariamente.
