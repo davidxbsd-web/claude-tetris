@@ -257,6 +257,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
@@ -307,7 +308,7 @@ restartBtn.addEventListener('click', init);
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  themeToggleBtn.textContent = theme === 'light' ? '☀️' : '🌙';
+  themeToggleBtn.textContent = theme === 'light' ? 'Light' : 'Dark';
 }
 
 function initTheme() {
