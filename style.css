@@ -139,6 +139,18 @@ body {
   border-radius: 4px;
 }
 
+.powerup-value {
+  font-size: 14px !important;
+  color: #ffd700 !important;
+  text-transform: uppercase;
+  animation: powerup-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes powerup-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
