@@ -39,6 +39,10 @@ Control flow: `init()` builds the board, seeds `next` via `randomPiece()`, calls
 
 Tunable constants at the top of `game.js`: `COLS`, `ROWS`, `BLOCK` (px per cell), `COLORS` (palette per piece type), `LINE_SCORES`, `dropInterval`. If `COLS`/`ROWS`/`BLOCK` change, the `<canvas id="board">` `width`/`height` in `index.html` must be updated to match (`COLS × BLOCK`, `ROWS × BLOCK`).
 
+## Menú de pausa
+
+`#pause-menu` (in `index.html`) is a separate overlay from `#overlay` (which is reserved for Game Over / records), reusing the generic `.overlay`/`.overlay.hidden` CSS pattern but styled independently under the `/* ---- Menú de pausa ---- */` block in `style.css`. It has two sub-views toggled with the generic `.hidden` class: the main menu (`#pause-menu-main`: Reanudar/Reiniciar/Ver controles buttons plus the `#start-level` select) and a controls sub-view (`#pause-menu-controls`). `togglePause()` opens/closes it symmetrically via `openPauseMenu()`/`closePauseMenu()`, tracked by the `menuOpen`/`controlsOpen` flags. `P` and `Escape` both toggle the menu; `Escape` closes the controls sub-view first if it's open. The chosen starting level (1–15) is persisted in `localStorage['tetris-start-level']` and applied by `getStartLevel()` the next time `init()` runs (i.e. next game, not the current one). While any `<input>`/`<select>`/`<textarea>`/`<button>` has focus, `inputLocked()` swallows all keydown handling except `Escape`, so the level `<select>` doesn't leak keystrokes into game controls.
+
 ## Records locales y combo
 
 `records.js` (classic script, loaded in `index.html` **before** `game.js`) owns local high-score persistence and the start screen. It exposes `loadRecords`, `saveRecord`, `resetRecords`, `renderRecords`, `initStartScreen`, `onGameOver` — all globals, called from `game.js` (and vice versa: `initStartScreen`/`onGameOver` reach back into `game.js` globals like `overlay`, `overlayTitle`, `overlayScore`, `init`).
