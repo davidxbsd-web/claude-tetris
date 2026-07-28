@@ -42,3 +42,18 @@ Tunable constants at the top of `game.js`: `COLS`, `ROWS`, `BLOCK` (px per cell)
 ## Menú de pausa
 
 `#pause-menu` (in `index.html`) is a separate overlay from `#overlay` (which is reserved for Game Over / records), reusing the generic `.overlay`/`.overlay.hidden` CSS pattern but styled independently under the `/* ---- Menú de pausa ---- */` block in `style.css`. It has two sub-views toggled with the generic `.hidden` class: the main menu (`#pause-menu-main`: Reanudar/Reiniciar/Ver controles buttons plus the `#start-level` select) and a controls sub-view (`#pause-menu-controls`). `togglePause()` opens/closes it symmetrically via `openPauseMenu()`/`closePauseMenu()`, tracked by the `menuOpen`/`controlsOpen` flags. `P` and `Escape` both toggle the menu; `Escape` closes the controls sub-view first if it's open. The chosen starting level (1–15) is persisted in `localStorage['tetris-start-level']` and applied by `getStartLevel()` the next time `init()` runs (i.e. next game, not the current one). While any `<input>`/`<select>`/`<textarea>`/`<button>` has focus, `inputLocked()` swallows all keydown handling except `Escape`, so the level `<select>` doesn't leak keystrokes into game controls.
+
+## Records locales y combo
+
+`records.js` (classic script, loaded in `index.html` **before** `game.js`) owns local high-score persistence and the start screen. It exposes `loadRecords`, `saveRecord`, `resetRecords`, `renderRecords`, `initStartScreen`, `onGameOver` — all globals, called from `game.js` (and vice versa: `initStartScreen`/`onGameOver` reach back into `game.js` globals like `overlay`, `overlayTitle`, `overlayScore`, `init`).
+
+New `localStorage` keys (see the header comment in `records.js` for the exact format):
+- `tetris-highscores` — JSON array (max 5) of `{ name, score, lines, level, combo, date }`, sorted desc by score. `combo` here is that game's `bestCombo`.
+- `tetris-player-name` — last name used when saving a record, used to prefill the name input.
+- `tetris-best-combo` / `tetris-max-lines-once` — all-time bests (combo and lines-cleared-in-one-clear), tracked independently of the top-5 score list so a huge combo/clear isn't lost just because the run's score didn't make the top 5.
+
+Startup contract changed: `game.js` no longer calls `init()` at the bottom — it calls `initTheme(); initStartScreen();`. `init()` now only runs when the player presses JUGAR on `#start-screen` or clicks `#restart-btn`. `endGame()` no longer paints the overlay itself; it delegates to `onGameOver(score, lines, level, bestCombo, maxLinesAtOnce)`, which fills `#overlay-title`/`#overlay-score` and, if the score qualifies for the top 5, reveals a name input + save button inside `.overlay-box` before showing the overlay.
+
+Combo: `combo` (current streak) and `bestCombo` (max this game) are tracked in `game.js`. `lockPiece()` accumulates lines cleared during that lock (regular `clearLines()` plus a laser powerup's clear, since both can fire in the same lock) into `lockClearedCount`, then calls `updateCombo()`: a lock that clears at least one line increments `combo` (and awards `50 * combo * level` bonus points from the second link onward); a lock that clears none resets `combo` to 0. `maxLinesAtOnce` tracks the largest single-clear batch (regular or laser) in the current game. The combo panel section (`#combo-indicator`, mirroring `#powerup-indicator`'s `hidden`-attribute pattern) only shows while `combo > 1`.
+
+A shared `inputLocked()` guard (checks `document.activeElement` for `INPUT`/`SELECT`/`TEXTAREA`/`BUTTON`) sits above the `keydown` listener so typing a player name (or focusing any button) doesn't trigger game controls; `Escape` always passes through.

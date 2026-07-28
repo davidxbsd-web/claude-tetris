@@ -37,6 +37,11 @@
           <span class="value powerup-value" id="powerup-name"></span>
         </div>
 
+        <div class="panel-section" id="combo-indicator" hidden>
+          <span class="label">COMBO</span>
+          <span class="value combo-value" id="combo-value">0</span>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -54,6 +59,11 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="save-record-box" class="hidden">
+          <p class="save-record-label">¡Nuevo récord! Introduce tu nombre:</p>
+          <input id="player-name-input" type="text" maxlength="12" placeholder="JUGADOR" />
+          <button id="save-record-btn">Guardar</button>
+        </div>
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
@@ -83,8 +93,25 @@
         </div>
       </div>
     </div>
+
+    <div id="start-screen" class="overlay hidden">
+      <div class="overlay-box start-box">
+        <h2 class="start-title">TETRIS</h2>
+        <div class="records-panel">
+          <span class="label">TOP 5 RECORDS</span>
+          <ol id="records-list" class="records-list"></ol>
+          <div class="records-stats">
+            <span>Mejor combo: <strong id="best-combo-ever">0</strong></span>
+            <span>Máx. líneas de una vez: <strong id="max-lines-ever">0</strong></span>
+          </div>
+        </div>
+        <button id="play-btn">JUGAR</button>
+        <button id="reset-records-btn" class="secondary-btn">Resetear records</button>
+      </div>
+    </div>
   </div>
 
+  <script src="records.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
