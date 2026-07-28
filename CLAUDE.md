@@ -38,3 +38,18 @@ Key pieces in `game.js`:
 Control flow: `init()` builds the board, seeds `next` via `randomPiece()`, calls `spawn()` (promotes `next` to `current`, generates a new `next`), then starts the `loop`. If a freshly spawned piece immediately collides, `endGame()` fires and the Game Over overlay is shown. Keyboard input (`keydown` listener) handles movement/rotation/soft-drop/hard-drop/pause; `P` toggles pause independent of game-over state.
 
 Tunable constants at the top of `game.js`: `COLS`, `ROWS`, `BLOCK` (px per cell), `COLORS` (palette per piece type), `LINE_SCORES`, `dropInterval`. If `COLS`/`ROWS`/`BLOCK` change, the `<canvas id="board">` `width`/`height` in `index.html` must be updated to match (`COLS × BLOCK`, `ROWS × BLOCK`).
+
+## Records locales y combo
+
+`records.js` (classic script, loaded in `index.html` **before** `game.js`) owns local high-score persistence and the start screen. It exposes `loadRecords`, `saveRecord`, `resetRecords`, `renderRecords`, `initStartScreen`, `onGameOver` — all globals, called from `game.js` (and vice versa: `initStartScreen`/`onGameOver` reach back into `game.js` globals like `overlay`, `overlayTitle`, `overlayScore`, `init`).
+
+New `localStorage` keys (see the header comment in `records.js` for the exact format):
+- `tetris-highscores` — JSON array (max 5) of `{ name, score, lines, level, combo, date }`, sorted desc by score. `combo` here is that game's `bestCombo`.
+- `tetris-player-name` — last name used when saving a record, used to prefill the name input.
+- `tetris-best-combo` / `tetris-max-lines-once` — all-time bests (combo and lines-cleared-in-one-clear), tracked independently of the top-5 score list so a huge combo/clear isn't lost just because the run's score didn't make the top 5.
+
+Startup contract changed: `game.js` no longer calls `init()` at the bottom — it calls `initTheme(); initStartScreen();`. `init()` now only runs when the player presses JUGAR on `#start-screen` or clicks `#restart-btn`. `endGame()` no longer paints the overlay itself; it delegates to `onGameOver(score, lines, level, bestCombo, maxLinesAtOnce)`, which fills `#overlay-title`/`#overlay-score` and, if the score qualifies for the top 5, reveals a name input + save button inside `.overlay-box` before showing the overlay.
+
+Combo: `combo` (current streak) and `bestCombo` (max this game) are tracked in `game.js`. `lockPiece()` accumulates lines cleared during that lock (regular `clearLines()` plus a laser powerup's clear, since both can fire in the same lock) into `lockClearedCount`, then calls `updateCombo()`: a lock that clears at least one line increments `combo` (and awards `50 * combo * level` bonus points from the second link onward); a lock that clears none resets `combo` to 0. `maxLinesAtOnce` tracks the largest single-clear batch (regular or laser) in the current game. The combo panel section (`#combo-indicator`, mirroring `#powerup-indicator`'s `hidden`-attribute pattern) only shows while `combo > 1`.
+
+A shared `inputLocked()` guard (checks `document.activeElement` for `INPUT`/`SELECT`/`TEXTAREA`/`BUTTON`) sits above the `keydown` listener so typing a player name (or focusing any button) doesn't trigger game controls; `Escape` always passes through.
