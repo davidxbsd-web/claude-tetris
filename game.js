@@ -283,14 +283,7 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha, overrideColor) {
   if (!colorIndex) return;
-  const color = overrideColor || COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  currentSkin().drawCell(context, x, y, colorIndex, size, alpha ?? 1, overrideColor);
 }
 
 function drawPowerupBorder(context, x, y, size) {
@@ -304,7 +297,8 @@ function drawPowerupBorder(context, x, y, size) {
 }
 
 function drawGrid() {
-  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-line').trim();
+  const skinGridColor = currentSkin().gridColor;
+  const gridColor = skinGridColor || getComputedStyle(document.documentElement).getPropertyValue('--grid-line').trim();
   ctx.strokeStyle = gridColor || '#22222e';
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
@@ -467,5 +461,6 @@ themeToggleBtn.addEventListener('click', () => {
   applyTheme(next);
 });
 
+initSkin();
 initTheme();
 init();
