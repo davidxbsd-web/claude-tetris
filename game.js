@@ -39,6 +39,8 @@ const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 const powerupIndicator = document.getElementById('powerup-indicator');
 const powerupNameEl = document.getElementById('powerup-name');
+const comboIndicator = document.getElementById('combo-indicator');
+const comboValueEl = document.getElementById('combo-value');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
@@ -48,6 +50,7 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const THEME_KEY = 'tetris-theme';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let combo, bestCombo, maxLinesAtOnce, lockClearedCount;
 
 const POWERUP_TYPES = ['bomb', 'laser', 'slow'];
 const POWERUP_LABELS = { bomb: 'BOMBA', laser: 'LÁSER', slow: 'CÁMARA LENTA' };
@@ -150,8 +153,10 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    maxLinesAtOnce = Math.max(maxLinesAtOnce, cleared);
     updateHUD();
   }
+  return cleared;
 }
 
 function registerLinesCleared(count) {
@@ -218,6 +223,8 @@ function applyLaser() {
     score += (LINE_SCORES[sortedRows.length] || sortedRows.length * 100) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    maxLinesAtOnce = Math.max(maxLinesAtOnce, sortedRows.length);
+    lockClearedCount += sortedRows.length;
     updateHUD();
   }
 }
@@ -251,9 +258,34 @@ function softDrop() {
 
 function lockPiece() {
   merge();
+  lockClearedCount = 0;
   if (current.power) applyPowerup(current.power);
-  clearLines();
+  lockClearedCount += clearLines();
+  updateCombo(lockClearedCount);
   spawn();
+}
+
+function updateCombo(clearedCount) {
+  if (clearedCount > 0) {
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+    if (combo >= 2) {
+      score += 50 * combo * level;
+      updateHUD();
+    }
+  } else {
+    combo = 0;
+  }
+  updateComboIndicator();
+}
+
+function updateComboIndicator() {
+  if (combo > 1) {
+    comboValueEl.textContent = combo;
+    comboIndicator.hidden = false;
+  } else {
+    comboIndicator.hidden = true;
+  }
 }
 
 function spawn() {
@@ -365,9 +397,7 @@ function drawNext() {
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
-  overlayTitle.textContent = 'GAME OVER';
-  overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
-  overlay.classList.remove('hidden');
+  onGameOver(score, lines, level, bestCombo, maxLinesAtOnce);
 }
 
 function togglePause() {
@@ -416,15 +446,26 @@ function init() {
   powerupQueued = false;
   powerupBag = null;
   slowUntil = 0;
+  combo = 0;
+  bestCombo = 0;
+  maxLinesAtOnce = 0;
+  lockClearedCount = 0;
   next = randomPiece();
   spawn();
   updateHUD();
+  updateComboIndicator();
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+function inputLocked() {
+  const el = document.activeElement;
+  return !!el && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(el.tagName);
+}
+
 document.addEventListener('keydown', e => {
+  if (inputLocked() && e.code !== 'Escape') return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -468,4 +509,4 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 initTheme();
-init();
+initStartScreen();
