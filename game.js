@@ -39,15 +39,27 @@ const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 const powerupIndicator = document.getElementById('powerup-indicator');
 const powerupNameEl = document.getElementById('powerup-name');
+const comboIndicator = document.getElementById('combo-indicator');
+const comboValueEl = document.getElementById('combo-value');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const pauseMenu = document.getElementById('pause-menu');
+const pauseMenuMain = document.getElementById('pause-menu-main');
+const pauseMenuControls = document.getElementById('pause-menu-controls');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const pauseControlsBtn = document.getElementById('pause-controls-btn');
+const pauseBackBtn = document.getElementById('pause-back-btn');
+const startLevelSelect = document.getElementById('start-level');
 
 const THEME_KEY = 'tetris-theme';
+const START_LEVEL_KEY = 'tetris-start-level';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, menuOpen, controlsOpen;
+let combo, bestCombo, maxLinesAtOnce, lockClearedCount;
 
 const POWERUP_TYPES = ['bomb', 'laser', 'slow'];
 const POWERUP_LABELS = { bomb: 'BOMBA', laser: 'LÁSER', slow: 'CÁMARA LENTA' };
@@ -150,8 +162,10 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    maxLinesAtOnce = Math.max(maxLinesAtOnce, cleared);
     updateHUD();
   }
+  return cleared;
 }
 
 function registerLinesCleared(count) {
@@ -218,6 +232,8 @@ function applyLaser() {
     score += (LINE_SCORES[sortedRows.length] || sortedRows.length * 100) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    maxLinesAtOnce = Math.max(maxLinesAtOnce, sortedRows.length);
+    lockClearedCount += sortedRows.length;
     updateHUD();
   }
 }
@@ -251,9 +267,34 @@ function softDrop() {
 
 function lockPiece() {
   merge();
+  lockClearedCount = 0;
   if (current.power) applyPowerup(current.power);
-  clearLines();
+  lockClearedCount += clearLines();
+  updateCombo(lockClearedCount);
   spawn();
+}
+
+function updateCombo(clearedCount) {
+  if (clearedCount > 0) {
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+    if (combo >= 2) {
+      score += 50 * combo * level;
+      updateHUD();
+    }
+  } else {
+    combo = 0;
+  }
+  updateComboIndicator();
+}
+
+function updateComboIndicator() {
+  if (combo > 1) {
+    comboValueEl.textContent = combo;
+    comboIndicator.hidden = false;
+  } else {
+    comboIndicator.hidden = true;
+  }
 }
 
 function spawn() {
@@ -359,23 +400,68 @@ function drawNext() {
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
-  overlayTitle.textContent = 'GAME OVER';
-  overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
-  overlay.classList.remove('hidden');
+  onGameOver(score, lines, level, bestCombo, maxLinesAtOnce);
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    closePauseMenu();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
+}
+
+/* ---- Menú de pausa ---- */
+
+function getStartLevel() {
+  const saved = parseInt(localStorage.getItem(START_LEVEL_KEY), 10);
+  if (Number.isInteger(saved) && saved >= 1 && saved <= 15) return saved;
+  return 1;
+}
+
+function populateStartLevelSelect() {
+  for (let i = 1; i <= 15; i++) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = String(i);
+    startLevelSelect.appendChild(opt);
+  }
+  startLevelSelect.value = String(getStartLevel());
+}
+
+function showPauseMainView() {
+  controlsOpen = false;
+  pauseMenuMain.classList.remove('hidden');
+  pauseMenuControls.classList.add('hidden');
+}
+
+function showPauseControlsView() {
+  controlsOpen = true;
+  pauseMenuMain.classList.add('hidden');
+  pauseMenuControls.classList.remove('hidden');
+}
+
+function openPauseMenu() {
+  menuOpen = true;
+  showPauseMainView();
+  pauseMenu.classList.remove('hidden');
+}
+
+function closePauseMenu() {
+  menuOpen = false;
+  controlsOpen = false;
+  pauseMenu.classList.add('hidden');
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
+function inputLocked() {
+  const el = document.activeElement;
+  return !!el && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(el.tagName);
 }
 
 function loop(ts) {
@@ -400,27 +486,40 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = getStartLevel();
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   nextPowerupAt = POWERUP_LINE_INTERVAL;
   powerupQueued = false;
   powerupBag = null;
   slowUntil = 0;
+  combo = 0;
+  bestCombo = 0;
+  maxLinesAtOnce = 0;
+  lockClearedCount = 0;
   next = randomPiece();
   spawn();
   updateHUD();
+  updateComboIndicator();
   overlay.classList.add('hidden');
+  closePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
+  if (inputLocked() && e.code !== 'Escape') return;
   if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (e.code === 'Escape') {
+    if (gameOver) return;
+    if (menuOpen && controlsOpen) { showPauseMainView(); return; }
+    togglePause();
+    return;
+  }
+  if (menuOpen || paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -445,6 +544,20 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+resumeBtn.addEventListener('click', () => {
+  if (paused) togglePause();
+});
+pauseRestartBtn.addEventListener('click', () => {
+  closePauseMenu();
+  init();
+});
+pauseControlsBtn.addEventListener('click', showPauseControlsView);
+pauseBackBtn.addEventListener('click', showPauseMainView);
+startLevelSelect.addEventListener('change', () => {
+  localStorage.setItem(START_LEVEL_KEY, startLevelSelect.value);
+});
+populateStartLevelSelect();
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   themeToggleBtn.textContent = theme === 'light' ? 'Light' : 'Dark';
@@ -463,4 +576,4 @@ themeToggleBtn.addEventListener('click', () => {
 
 initSkin();
 initTheme();
-init();
+initStartScreen();
