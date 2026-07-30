@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="wrapper">
-    <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema claro/oscuro">🌙</button>
+    <button id="theme-toggle" class="theme-toggle btn-ghost" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema claro/oscuro">🌙</button>
     <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -25,6 +25,11 @@
         <div class="panel-section">
           <span class="label">LEVEL</span>
           <span class="value" id="level">1</span>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">COMBO</span>
+          <span class="value" id="combo">0</span>
         </div>
 
         <div class="panel-section">
@@ -50,11 +55,27 @@
       </aside>
     </div>
 
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p class="overlay-heading">RÉCORDS</p>
+        <div id="start-records" class="records"></div>
+        <button id="start-btn" class="btn-primary">JUGAR</button>
+        <button id="reset-records-btn" class="btn-ghost">Resetear récords</button>
+      </div>
+    </div>
+
     <div id="overlay" class="overlay hidden">
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <div id="name-entry" hidden>
+          <p class="records-note">¡Nuevo récord!</p>
+          <input id="name-input" maxlength="12" placeholder="Tu nombre" autocomplete="off" />
+          <button id="save-record-btn" class="btn-primary">Guardar</button>
+        </div>
+        <div id="overlay-records" class="records"></div>
+        <button id="restart-btn" class="btn-primary">Reiniciar</button>
+        <button id="reset-records-btn-2" class="btn-ghost">Resetear récords</button>
       </div>
     </div>
   </div>
