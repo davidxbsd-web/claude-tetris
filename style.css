@@ -22,6 +22,12 @@
   --restart-text: #0f0f17;
   --restart-hover: #9bbdff;
   --board-shadow: rgba(0, 0, 0, 0.6);
+  --canvas-bg: var(--panel-bg);
+}
+
+[data-skin="neon"] {
+  --canvas-bg: #05050a;
+  --board-shadow: rgba(0, 229, 255, 0.25);
 }
 
 [data-theme="light"] {
@@ -97,9 +103,10 @@ body {
 #board {
   display: block;
   border: 1px solid var(--border);
-  background: var(--panel-bg);
+  background: var(--canvas-bg);
   border-radius: 4px;
   box-shadow: 0 0 40px var(--board-shadow);
+  transition: background 0.15s;
 }
 
 /* ---- Panel lateral ---- */
@@ -135,8 +142,25 @@ body {
 #next-canvas {
   display: block;
   border: 1px solid var(--border);
-  background: var(--panel-bg);
+  background: var(--canvas-bg);
   border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.skin-select {
+  width: 100%;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.skin-select:hover {
+  border-color: var(--accent);
 }
 
 .powerup-value {
